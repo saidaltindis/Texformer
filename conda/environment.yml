@@ -1,0 +1,12 @@
+name: texformer
+channels:
+  - defaults
+  - pytorch
+  - conda-forge
+  - anaconda
+dependencies:
+  - python=3.6
+  - pytorch=1.4.0
+  - torchvision=0.5.0
+  - cudatoolkit=9.2
+  - easydict
