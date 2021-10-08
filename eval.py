@@ -151,7 +151,7 @@ class Tester:
 if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('--checkpoint_path', type=str, default='./pretrained/texformer_ep500.pt', help='path to your checkpoint')
+    parser.add_argument('--checkpoint_path', type=str, default='/auto/k2/adundar/3DSynthesis/data/texformer/pretrained/texformer_ep500.pt', help='path to your checkpoint')
     parser.add_argument('--src_ch', type=int, default=4, help='Key map')
     parser.add_argument('--tgt_ch', type=int, default=3, help='Query map')
     parser.add_argument('--feat_dim', type=int, default=128, help='feature dimension')

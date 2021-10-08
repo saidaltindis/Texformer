@@ -1,9 +1,16 @@
+import sys
+try:
+    sys.path.index('./')
+except ValueError:
+    sys.path.insert(0, './')
+
+
+from transformers.texformer import Texformer
 import torch
 import numpy as np
 import imageio
 import config
 from easydict import EasyDict
-from transformers.texformer import Texformer
 from RSC_net.ra_test import RaRunner
 from NMR.neural_render_test import NrTextureRenderer
 from utils.scipy_deprecated import imresize
@@ -15,7 +22,7 @@ class Demo:
         self.device = 'cuda'
         self.opts = EasyDict(src_ch=4, tgt_ch=3, feat_dim=128,
                              nhead=8, mask_fusion=1, out_ch=3,
-                             checkpoint_path='./pretrained/texformer_ep500.pt')
+                             checkpoint_path='/auto/k2/adundar/3DSynthesis/data/texformer/pretrained/texformer_ep500.pt')
         self.checkpoint_path = self.opts.checkpoint_path
         
         self.model = Texformer(self.opts)
