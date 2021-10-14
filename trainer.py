@@ -175,22 +175,13 @@ class Trainer:
     def generate_uvmap(self, img, seg, coord):
         src = torch.cat([img, seg], dim=1)  # Key
 
-        # print(" src shape:", src.shape)
-        # print("before query: ", self.tgt.shape)
         tgt = self.tgt.expand(src.shape[0], -1, -1, -1)  # Query
-        # print("after query: ", tgt.shape)
-        # print("img shape: ", img.shape)
-        expanded_img = img.repeat(1,1,1,2)
-        # print("after expanding : ", expanded_img.shape)
-        # print("before concat:" , tgt.shape)
-        tgt = torch.cat([expanded_img, tgt], dim=1)
-        # print("after concat: ", tgt.shape)
 
         if not self.opts.mask_fusion:
             value = coord if self.opts.out_type == 'flow' else img
         else:
             value = torch.cat([coord, img], dim=1)
-        # print("key: ", src.shape, "| query: ", tgt.shape, "| value: ", value.shape)
+
         out = self.model(tgt, src, value)
 
 
@@ -211,9 +202,11 @@ class Trainer:
     
     def render_img(self, verts, cam_t, uvmap, background_image_batch):
         rendered_img, depth, mask = self.renderer.render(verts, cam_t, uvmap, crop_width=self.src_size[0]-self.src_size[1])
-        #print("Type of Uvmap: ", type(uvmap))
-        #print("Shape of Uvmap: ", uvmap.shape)
-        #print("RI [0]: ", rendered_img[0])
+        '''
+        print("Type of Uvmap: ", type(uvmap))
+        print("Shape of Uvmap: ", uvmap.shape)
+        print("RI [0]: ", rendered_img[0])
+        '''
         mask = mask.unsqueeze(1)
         generated_img_batch = rendered_img * mask + background_image_batch * (1 - mask)
         generated_img_batch = generated_img_batch.contiguous()   

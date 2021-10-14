@@ -1,1 +1,1 @@
-nohup python trainer.py --exp_name add-image-to-query &> log.out &
+nohup python trainer.py --exp_name texformer-local &> log.out &
