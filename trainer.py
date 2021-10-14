@@ -1,3 +1,7 @@
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
@@ -32,9 +36,9 @@ class Trainer:
         self.train_dataset = SMPLMarket(config.market1501_dir, train_flag=True, random_pick=True)
         
         self.combined_dataset = Combine([self.train_dataset, self.background_dataset, self.surreal_dataset], random=True)
-        self.combined_dataloader = DataLoader(self.combined_dataset, batch_size=opts.batch_size, 
+        self.combined_dataloader = DataLoader(self.combined_dataset, batch_size= opts.batch_size, 
                                               shuffle=True, num_workers=opts.num_workers, drop_last=True)
-
+	
         self.test_dataset = SMPLMarket(config.market1501_dir, train_flag=False, random_pick=False)
         
         self.combined_dataset_test = Combine([self.test_dataset, self.background_dataset, self.surreal_dataset], random=False)
@@ -77,6 +81,18 @@ class Trainer:
         for epoch_idx in tqdm(range(self.opts.num_epochs)):
             for batch in tqdm(self.combined_dataloader, desc=f'Epoch{epoch_idx}'):
                 # run model
+                '''
+                input shapes
+                print("img - ", batch[0]['img'].shape)
+                print("verts - ", batch[0]['verts'].shape)
+                print("cam_t - ", batch[0]['cam_t'].shape)
+                print("seg - ", batch[0]['seg'].shape)
+                print("seg_long - ", batch[0]['seg_long'].shape)
+                print("smpl_seg - ", batch[0]['smpl_seg'].shape)
+                print("coord - ", batch[0]['coord'].shape)
+                print("img_name - ", len(batch[0]['img_name']))
+                print("backround: ", len(batch[1]), " | texture: ", len(batch[2]))
+                '''
                 self.forward_step(batch)
                 loss = self.step_output['loss_final']      
 
@@ -159,14 +175,25 @@ class Trainer:
     def generate_uvmap(self, img, seg, coord):
         src = torch.cat([img, seg], dim=1)  # Key
 
+        # print(" src shape:", src.shape)
+        # print("before query: ", self.tgt.shape)
         tgt = self.tgt.expand(src.shape[0], -1, -1, -1)  # Query
+        # print("after query: ", tgt.shape)
+        # print("img shape: ", img.shape)
+        expanded_img = img.repeat(1,1,1,2)
+        # print("after expanding : ", expanded_img.shape)
+        # print("before concat:" , tgt.shape)
+        tgt = torch.cat([expanded_img, tgt], dim=1)
+        # print("after concat: ", tgt.shape)
 
         if not self.opts.mask_fusion:
             value = coord if self.opts.out_type == 'flow' else img
         else:
             value = torch.cat([coord, img], dim=1)
+        # print("key: ", src.shape, "| query: ", tgt.shape, "| value: ", value.shape)
         out = self.model(tgt, src, value)
-        
+
+
         # generate uvmap
         combine_mask = 0
         if not self.opts.mask_fusion:
@@ -184,6 +211,9 @@ class Trainer:
     
     def render_img(self, verts, cam_t, uvmap, background_image_batch):
         rendered_img, depth, mask = self.renderer.render(verts, cam_t, uvmap, crop_width=self.src_size[0]-self.src_size[1])
+        #print("Type of Uvmap: ", type(uvmap))
+        #print("Shape of Uvmap: ", uvmap.shape)
+        #print("RI [0]: ", rendered_img[0])
         mask = mask.unsqueeze(1)
         generated_img_batch = rendered_img * mask + background_image_batch * (1 - mask)
         generated_img_batch = generated_img_batch.contiguous()   
