@@ -66,7 +66,7 @@ class TrainOptions():
     
     def set_input_output_channels(self):
         self.args.src_ch = 4
-        self.args.tgt_ch = 3
+        self.args.tgt_ch = 6
 
         out_ch_dict = {'flow': 2, 'rgb': 3}
         self.args.out_ch = out_ch_dict[self.args.out_type]

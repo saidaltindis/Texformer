@@ -1,6 +1,10 @@
 """ Evaluation on the SMPLMarket dataset
 
 """
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -79,9 +83,15 @@ class Tester:
             #     print(i, len(self.test_dataset))
             
             img_name = sample['img_name']
+            #print("S: ", sample)
             verts, cam_t, uvmap, combine_mask, tex_flow, uvmap_rgb, uvmap_flow = self.forward_step(sample)
             rendered_img, depth, mask = self.renderer_numerical.render(verts, cam_t, uvmap, crop_width=64)
-            
+            '''
+            print("RI: ", rendered_img.shape)
+            print("RI[0]: ", rendered_img[0].shape)
+            print("UVMAP: ", uvmap.shape)
+            print("UVMAP[0]: ", uvmap[0].shape)
+            '''
             rendered_img = rendered_img.clamp(-1, 1)
             uvmap = uvmap.clamp(-1, 1)
             result = ((rendered_img[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
@@ -89,7 +99,7 @@ class Tester:
             gt = ((sample['img'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8)
             uvmap = ((uvmap[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
             background = self.background_dataset[i % len(self.background_dataset)]
-
+            print("Result: ", result.shape, "Mask: ", mask.shape, "GT: ", gt.shape)
             self.eval_metrics(result, mask, gt, background)
 
         print('+'*6 + ' Summary ' + '+'*6)

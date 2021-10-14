@@ -75,3 +75,7 @@ model_ts*.txt
 .idea
 .vscode
 _darcs
+
+
+# texformer related
+logs/
