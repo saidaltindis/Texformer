@@ -177,6 +177,10 @@ class Trainer:
 
         tgt = self.tgt.expand(src.shape[0], -1, -1, -1)  # Query
 
+        # Expand the input image as it is the same size as the query and concatanete them in dimension 1.
+        expanded_img = img.repeat(1,1,1,2)
+        tgt = torch.cat([expanded_img, tgt], dim=1)
+
         if not self.opts.mask_fusion:
             value = coord if self.opts.out_type == 'flow' else img
         else:
