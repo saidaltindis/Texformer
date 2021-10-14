@@ -57,9 +57,13 @@ class Tester:
         coord = sample['coord'].to(self.device)[None]
         
         # ---------- foward ------------
-        src = torch.cat([img, seg], dim=1)
-        tgt = self.tgt.expand(src.shape[0], -1, -1, -1)
-        value = torch.cat([coord, img], dim=1)
+        src = torch.cat([img, seg], dim=1) # Key
+
+        tgt = self.tgt.expand(src.shape[0], -1, -1, -1) # Query
+        expanded_img = img.repeat(1,1,1,2)
+        tgt = torch.cat([expanded_img, tgt], dim=1)
+        
+        value = torch.cat([coord, img], dim=1) # Value
         out = self.model(tgt, src, value)
         
         # generate uvmap
@@ -83,7 +87,7 @@ class Tester:
             #     print(i, len(self.test_dataset))
             
             img_name = sample['img_name']
-            #print("S: ", sample)
+
             verts, cam_t, uvmap, combine_mask, tex_flow, uvmap_rgb, uvmap_flow = self.forward_step(sample)
             rendered_img, depth, mask = self.renderer_numerical.render(verts, cam_t, uvmap, crop_width=64)
             '''
@@ -99,7 +103,6 @@ class Tester:
             gt = ((sample['img'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8)
             uvmap = ((uvmap[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
             background = self.background_dataset[i % len(self.background_dataset)]
-            print("Result: ", result.shape, "Mask: ", mask.shape, "GT: ", gt.shape)
             self.eval_metrics(result, mask, gt, background)
 
         print('+'*6 + ' Summary ' + '+'*6)
