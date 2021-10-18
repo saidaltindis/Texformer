@@ -198,7 +198,7 @@ class Trainer:
             uvmap_rgb = out[1]
             uvmap = uvmap_flow * combine_mask + uvmap_rgb * (1-combine_mask)
 
-        return uvmap, combine_mask
+        return uvmap, combine_mask, uvmap_flow
     
     def render_img(self, verts, cam_t, uvmap, background_image_batch):
         rendered_img, depth, mask = self.renderer.render(verts, cam_t, uvmap, crop_width=self.src_size[0]-self.src_size[1])
@@ -251,10 +251,10 @@ class Trainer:
 
         # run model --> generate uvmap
         seg = self.var.seg 
-        uvmap, combine_mask = self.generate_uvmap(self.var.img, seg, self.var.coord)
+        uvmap, combine_mask, uvmap_flow = self.generate_uvmap(self.var.img, seg, self.var.coord)
 
         # render image --> compute image loss, pose from 1, texture from 1
-        rendered_img1, generated_img_batch1 = self.render_img(self.var.verts, self.var.cam_t, uvmap, self.var.background_image_batch)
+        rendered_img1, generated_img_batch1 = self.render_img(self.var.verts, self.var.cam_t, uvmap_flow, self.var.background_image_batch)
         loss1, loss_reid1, loss_part_style1 = self.compute_img_loss(generated_img_batch1, self.var.img, self.var.seg_long, self.var.smpl_seg)
         # render image --> compute image loss, pose from 2, texture from 1
         rendered_img2, generated_img_batch2 = self.render_img(self.var.verts2, self.var.cam_t2, uvmap, self.var.background_image_batch)
