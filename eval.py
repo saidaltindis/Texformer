@@ -23,6 +23,7 @@ class Tester:
     def __init__(self, opts):
         self.device = 'cuda'
         self.checkpoint_path = opts.checkpoint_path
+        self.multiview = opts.multiview
         self.opts = opts 
         
         self.model = Texformer(opts)
@@ -37,7 +38,11 @@ class Tester:
 
         # * test dataset
         self.background_dataset = BackgroundDataset([config.PRW_img_path, config.CUHK_SYSU_path], img_size=(128, 64), random=False)
-        self.test_dataset = SMPLMarket(config.market1501_dir)
+
+        if self.multiview:
+            self.test_dataset = SMPLMarket(config.market1501_dir)
+        else:
+            self.test_dataset = SMPLMarketMultiview(config.market1501_dir) # TODO import class when implemented
 
         # * test metrics
         self.ssim = SSIM(window_size=11, size_average=True)
@@ -48,12 +53,7 @@ class Tester:
     
     def forward_step(self, sample):
         img = sample['img'].to(self.device)[None]
-        verts = sample['verts'].to(self.device)[None]
-        cam_t = sample['cam_t'].to(self.device)[None]
         seg = sample['seg'].to(self.device)[None]
-        seg_long = sample['seg_long'].to(self.device)[None]
-        smpl_seg = sample['smpl_seg'].to(self.device)[None]
-        smpl_seg_float = (smpl_seg.float() / 7.) * 2. -1
         coord = sample['coord'].to(self.device)[None]
         
         # ---------- foward ------------
@@ -69,7 +69,7 @@ class Tester:
         uvmap_rgb = out[1]
         uvmap = uvmap_flow * combine_mask + uvmap_rgb * (1-combine_mask)
 
-        return verts, cam_t, uvmap, combine_mask, tex_flow, uvmap_rgb, uvmap_flow
+        return uvmap
 
     @torch.no_grad()
     def generate_numerical_results(self):
@@ -79,13 +79,16 @@ class Tester:
         self.cossimR_list = []
 
         for i, sample in tqdm(enumerate(self.test_dataset), total=len(self.test_dataset)):
-            # if i % 100 == 0:
-            #     print(i, len(self.test_dataset))
             
-            img_name = sample['img_name']
-            #print("S: ", sample)
-            verts, cam_t, uvmap, combine_mask, tex_flow, uvmap_rgb, uvmap_flow = self.forward_step(sample)
-            rendered_img, depth, mask = self.renderer_numerical.render(verts, cam_t, uvmap, crop_width=64)
+            if self.multiview:
+                uvmap = self.forward_step(sample)
+                rendered_img, depth, mask = self.renderer_numerical.render(sample['verts2'], sample['cam_t2'], uvmap, crop_width=64)
+                gt = ((sample['img2'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8) # TODO check after implementation of test loader
+            else:
+                uvmap = self.forward_step(sample)
+                rendered_img, depth, mask = self.renderer_numerical.render(sample['verts'], sample['cam_t'], uvmap, crop_width=64)
+                gt = ((sample['img'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8)
+            
             '''
             print("RI: ", rendered_img.shape)
             print("RI[0]: ", rendered_img[0].shape)
@@ -96,10 +99,8 @@ class Tester:
             uvmap = uvmap.clamp(-1, 1)
             result = ((rendered_img[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
             mask = (mask[0].cpu().numpy()*255).astype(np.uint8)
-            gt = ((sample['img'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8)
             uvmap = ((uvmap[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
             background = self.background_dataset[i % len(self.background_dataset)]
-            print("Result: ", result.shape, "Mask: ", mask.shape, "GT: ", gt.shape)
             self.eval_metrics(result, mask, gt, background)
 
         print('+'*6 + ' Summary ' + '+'*6)
@@ -168,6 +169,7 @@ if __name__ == '__main__':
     parser.add_argument('--nhead', type=int, default=8, help='number of heads')
     parser.add_argument('--mask_fusion', type=int, default=1, help='use mask fusion for output')
     parser.add_argument('--out_ch', type=int, default=3, help='not useful when mask_fusion is True')
+    parser.add_argument('--multiview', type=bool, default=False, help='whether use multiview of the images or not')
     
     options = parser.parse_args()
     tester = Tester(options)
