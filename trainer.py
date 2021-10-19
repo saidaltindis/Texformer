@@ -254,8 +254,13 @@ class Trainer:
         uvmap, combine_mask, uvmap_flow = self.generate_uvmap(self.var.img, seg, self.var.coord)
 
         # render image --> compute image loss, pose from 1, texture from 1
-        rendered_img1, generated_img_batch1 = self.render_img(self.var.verts, self.var.cam_t, uvmap_flow, self.var.background_image_batch)
+        rendered_img1, generated_img_batch1 = self.render_img(self.var.verts, self.var.cam_t, uvmap, self.var.background_image_batch)
         loss1, loss_reid1, loss_part_style1 = self.compute_img_loss(generated_img_batch1, self.var.img, self.var.seg_long, self.var.smpl_seg)
+        # render image --> compute image loss, pose from 1, texture from 1 usingo only uvmap_flow
+        flow_image_weight = 1
+        rendered_img3, generated_img_batch3 = self.render_img(self.var.verts, self.var.cam_t, uvmap_flow, self.var.background_image_batch)
+        loss3, loss_reid3, loss_part_style3 = self.compute_img_loss(generated_img_batch3, self.var.img, self.var.seg_long, self.var.smpl_seg)
+
         # render image --> compute image loss, pose from 2, texture from 1
         rendered_img2, generated_img_batch2 = self.render_img(self.var.verts2, self.var.cam_t2, uvmap, self.var.background_image_batch)
         loss2, loss_reid2, loss_part_style2 = self.compute_img_loss(generated_img_batch2, self.var.img2, self.var.seg_long2, self.var.smpl_seg2)
@@ -266,12 +271,14 @@ class Trainer:
         # total loss
         loss = loss1 + \
                self.opts.mv_loss_weight * loss2 + \
-               self.opts.face_structure_loss_weight * loss_face_structure 
+               self.opts.face_structure_loss_weight * loss_face_structure + \
+               flow_image_weight * loss3
 
         # output for backprop and logging 
-        self.step_output = {'uvmap': uvmap, 'rendered_img': rendered_img1, 'rendered_img2': rendered_img2, 'combine_mask': combine_mask,
+        self.step_output = {'uvmap': uvmap, 'rendered_img': rendered_img1, 'rendered_img2': rendered_img2, 'rendered_img3': rendered_img3, 'combine_mask': combine_mask,
                             'loss': loss1, 'loss_reid': loss_reid1, 'loss_part_style': loss_part_style1,
                             'loss2': loss2, 'loss_reid2': loss_reid2, 'loss_part_style2': loss_part_style2,
+                            'loss3': loss3, 'loss_reid3': loss_reid3, 'loss_part_style3': loss_part_style3,
                             'loss_final': loss, 'loss_face_structure': loss_face_structure,}
         self.step_output.update(self.var)
 
