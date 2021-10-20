@@ -84,17 +84,33 @@ class Tester:
 
         for i, sample in tqdm(enumerate(self.test_dataset), total=len(self.test_dataset)):
             if self.multiview:
-                verts2 = sample['verts2'].to(self.device)[None]
-                cam_t2 = sample['cam_t2'].to(self.device)[None]
-                uvmap = self.forward_step(sample)
-                rendered_img, depth, mask = self.renderer_numerical.render(verts2, cam_t2, uvmap, crop_width=64)
-                gt = ((sample['img2'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8) # TODO check after implementation of test loader
+                for view in sample.views:
+                    print(len(sample.views))
+                    verts = view['verts'].to(self.device)[None]
+                    cam_t = sample['cam_t'].to(self.device)[None]
+                    uvmap = self.forward_step(sample)
+                    rendered_img, depth, mask = self.renderer_numerical.render(verts, cam_t, uvmap, crop_width=64)
+                    gt = ((view['img'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8)
+                    rendered_img = rendered_img.clamp(-1, 1)
+                    uvmap = uvmap.clamp(-1, 1)
+                    result = ((rendered_img[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
+                    mask = (mask[0].cpu().numpy()*255).astype(np.uint8)
+                    uvmap = ((uvmap[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
+                    background = self.background_dataset[i % len(self.background_dataset)]
+                    self.eval_metrics(result, mask, gt, background)
             else:
                 verts = sample['verts'].to(self.device)[None]
                 cam_t = sample['cam_t'].to(self.device)[None]
                 uvmap = self.forward_step(sample)
                 rendered_img, depth, mask = self.renderer_numerical.render(verts, cam_t, uvmap, crop_width=64)
                 gt = ((sample['img'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8)
+                rendered_img = rendered_img.clamp(-1, 1)
+                uvmap = uvmap.clamp(-1, 1)
+                result = ((rendered_img[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
+                mask = (mask[0].cpu().numpy()*255).astype(np.uint8)
+                uvmap = ((uvmap[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
+                background = self.background_dataset[i % len(self.background_dataset)]
+                self.eval_metrics(result, mask, gt, background)
             
             '''
             print("RI: ", rendered_img.shape)
@@ -102,20 +118,12 @@ class Tester:
             print("UVMAP: ", uvmap.shape)
             print("UVMAP[0]: ", uvmap[0].shape)
             '''
-            rendered_img = rendered_img.clamp(-1, 1)
-            uvmap = uvmap.clamp(-1, 1)
-            result = ((rendered_img[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
-            mask = (mask[0].cpu().numpy()*255).astype(np.uint8)
-            uvmap = ((uvmap[0].cpu().permute(1, 2, 0).numpy()+1)*0.5*255).astype(np.uint8)
-            background = self.background_dataset[i % len(self.background_dataset)]
-            self.eval_metrics(result, mask, gt, background)
-
         print('+'*6 + ' Summary ' + '+'*6)
         print('CosSim: {:.4f}'.format(np.mean(self.cossim_list)))
         print('CosSim-R: {:.4f}'.format(np.mean(self.cossimR_list)))
         print('SSIM: {:.4f}'.format(np.mean(self.ssim_list)))
         print('LPIPS: {:.4f}'.format(np.mean(self.lpips_list)))
-
+    
     def eval_metrics(self, result, mask, gt, background):
         result = (result / 255.0) * 2 - 1
         mask = mask / 255.0

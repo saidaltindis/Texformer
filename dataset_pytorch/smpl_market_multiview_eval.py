@@ -31,8 +31,6 @@ class SMPLMarketMultiview(Dataset):
 
         self.img_paths_dict = img_paths_dict
         self.pids = list(self.img_paths_dict.keys())
-        print(len(self.img_paths), len(self.pids), self.pids)
-        
 
         # smpl dir
         self.smpl_dir = osp.join(data_dir, 'SMPL_RSC', 'pkl')
@@ -121,14 +119,15 @@ class SMPLMarketMultiview(Dataset):
 
         pid = self.pids[idx]
         pid_all_paths = self.img_paths_dict[pid]
- 
-        img_path1, img_path2 = np.random.choice(a=pid_all_paths, size=2, replace=False)
 
-        sample = self.get_data(img_path1, '')
-        sample2 = self.get_data(img_path2, '2')
-        
-        sample.update(sample2)
+        views = []
+        for img_path in pid_all_paths:
+          views.append(self.get_data(img_path))
 
+        sample = views[0]
+        sample['views'] = views[1:]
+
+        print(sample) # logging
         return sample
 
 
