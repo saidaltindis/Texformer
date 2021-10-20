@@ -126,8 +126,6 @@ class SMPLMarketMultiview(Dataset):
 
         sample = views[0]
         sample['views'] = views[1:]
-
-        print(sample) # logging
         return sample
 
 

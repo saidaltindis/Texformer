@@ -84,8 +84,7 @@ class Tester:
 
         for i, sample in tqdm(enumerate(self.test_dataset), total=len(self.test_dataset)):
             if self.multiview:
-                for view in sample.views:
-                    print(len(sample.views))
+                for view in sample['views']:
                     verts = view['verts'].to(self.device)[None]
                     cam_t = sample['cam_t'].to(self.device)[None]
                     uvmap = self.forward_step(sample)
