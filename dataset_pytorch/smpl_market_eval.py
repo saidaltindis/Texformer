@@ -19,7 +19,6 @@ class SMPLMarket(Dataset):
         with open(paths_pkl_path, 'rb') as f:
             self.img_paths = pickle.load(f)
         
-        
 
         # smpl dir
         self.smpl_dir = osp.join(data_dir, 'SMPL_RSC', 'pkl')

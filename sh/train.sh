@@ -1,0 +1,1 @@
+nohup python trainer.py --exp_name texformer-local &> log.out &
