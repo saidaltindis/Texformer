@@ -12,6 +12,7 @@ import config
 from transformers.texformer import Texformer
 from NMR.neural_render_test import NrTextureRenderer
 from dataset_pytorch.smpl_market_eval import SMPLMarket
+from dataset_pytorch.smpl_market_multiview_eval import SMPLMarketMultiview
 from dataset_pytorch.background_pose import BackgroundDataset
 from loss.PCB_PerLoss import ReIDLoss
 from loss.pytorch_ssim import SSIM
@@ -40,10 +41,10 @@ class Tester:
         self.background_dataset = BackgroundDataset([config.PRW_img_path, config.CUHK_SYSU_path], img_size=(128, 64), random=False)
 
         if self.multiview:
-            self.test_dataset = SMPLMarket(config.market1501_dir)
+            self.test_dataset = SMPLMarketMultiview(config.market1501_dir)
         else:
-            self.test_dataset = SMPLMarketMultiview(config.market1501_dir) # TODO import class when implemented
-
+            self.test_dataset = SMPLMarket(config.market1501_dir)
+        
         # * test metrics
         self.ssim = SSIM(window_size=11, size_average=True)
         self.lpips = lpips.LPIPS(pretrained=True, net='alex')
