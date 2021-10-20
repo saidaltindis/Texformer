@@ -19,7 +19,6 @@ class SMPLMarket(Dataset):
         paths_pkl_path = osp.join(data_dir, 'train_test_img_paths_pid.pkl')   
         with open(paths_pkl_path, 'rb') as f:
             all_paths = pickle.load(f)
-        
         if train_flag:
             self.img_paths_dict = all_paths['out_dict_train']
         else:
