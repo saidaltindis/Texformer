@@ -40,9 +40,12 @@ class Tester:
         # * test dataset
         self.background_dataset = BackgroundDataset([config.PRW_img_path, config.CUHK_SYSU_path], img_size=(128, 64), random=False)
 
+        print("Multiview is", self.multiview)
         if self.multiview:
+            print("Entered multiview-", self.multiview)
             self.test_dataset = SMPLMarketMultiview(config.market1501_dir)
         else:
+            print("Not entered multiview-", self.multiview)
             self.test_dataset = SMPLMarket(config.market1501_dir)
         
         # * test metrics
@@ -80,14 +83,17 @@ class Tester:
         self.cossimR_list = []
 
         for i, sample in tqdm(enumerate(self.test_dataset), total=len(self.test_dataset)):
-            
             if self.multiview:
+                verts2 = sample['verts2'].to(self.device)[None]
+                cam_t2 = sample['cam_t2'].to(self.device)[None]
                 uvmap = self.forward_step(sample)
-                rendered_img, depth, mask = self.renderer_numerical.render(sample['verts2'], sample['cam_t2'], uvmap, crop_width=64)
+                rendered_img, depth, mask = self.renderer_numerical.render(verts2, cam_t2, uvmap, crop_width=64)
                 gt = ((sample['img2'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8) # TODO check after implementation of test loader
             else:
+                verts = sample['verts'].to(self.device)[None]
+                cam_t = sample['cam_t'].to(self.device)[None]
                 uvmap = self.forward_step(sample)
-                rendered_img, depth, mask = self.renderer_numerical.render(sample['verts'], sample['cam_t'], uvmap, crop_width=64)
+                rendered_img, depth, mask = self.renderer_numerical.render(verts, cam_t, uvmap, crop_width=64)
                 gt = ((sample['img'].permute(1, 2, 0).numpy() + 1) * 0.5 * 255).astype(np.uint8)
             
             '''
@@ -170,7 +176,7 @@ if __name__ == '__main__':
     parser.add_argument('--nhead', type=int, default=8, help='number of heads')
     parser.add_argument('--mask_fusion', type=int, default=1, help='use mask fusion for output')
     parser.add_argument('--out_ch', type=int, default=3, help='not useful when mask_fusion is True')
-    parser.add_argument('--multiview', type=bool, default=False, help='whether use multiview of the images or not')
+    parser.add_argument('--multiview', type=int, default=0, help='whether use multiview of the images or not')
     
     options = parser.parse_args()
     tester = Tester(options)

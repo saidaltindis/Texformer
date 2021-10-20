@@ -31,6 +31,7 @@ class SMPLMarketMultiview(Dataset):
 
         self.img_paths_dict = img_paths_dict
         self.pids = list(self.img_paths_dict.keys())
+        print(len(self.img_paths), len(self.pids), self.pids)
         
 
         # smpl dir
