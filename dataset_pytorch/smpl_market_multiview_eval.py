@@ -6,24 +6,30 @@ import imageio
 import numpy as np
 
 
-class SMPLMarket(Dataset):
+class SMPLMarketMultiview(Dataset):
     """
-    Enhanced Market-1501 dataset
+    for Evaluation
 
     """
-    def __init__(self, data_dir, train_flag=True, random_pick=True):
+    def __init__(self, data_dir):
         super().__init__()
         self.data_dir = data_dir
-        self.random_pick = random_pick
 
-        paths_pkl_path = osp.join(data_dir, 'train_test_img_paths_pid.pkl')   
+        paths_pkl_path = osp.join(data_dir, 'eval_list.pkl')
         with open(paths_pkl_path, 'rb') as f:
-            all_paths = pickle.load(f)
-        if train_flag:
-            self.img_paths_dict = all_paths['out_dict_train']
-        else:
-            self.img_paths_dict = all_paths['out_dict_test']
-        
+            self.img_paths = pickle.load(f)
+
+        img_paths_dict = dict()
+
+        for img_path in self.img_paths:
+            img_id = int((img_path.split('/')[1]).split('_')[0])
+
+            if img_id in img_paths_dict:
+                img_paths_dict[img_id].append(img_path)
+            else:
+                img_paths_dict[img_id] = [img_path]
+
+        self.img_paths_dict = img_paths_dict
         self.pids = list(self.img_paths_dict.keys())
 
         # smpl dir
@@ -37,7 +43,7 @@ class SMPLMarket(Dataset):
         self.part_seg_dir = osp.join(data_dir, 'part_seg_EANet')
 
     def __len__(self):
-        return len(self.pids)
+        return len(self.img_paths)
 
     def preprocess_img(self, img):
         # input: HxWxC, uint8(0~255)
@@ -108,19 +114,18 @@ class SMPLMarket(Dataset):
                   }
 
         return sample
-    
+
     def __getitem__(self, idx):
+
         pid = self.pids[idx]
         pid_all_paths = self.img_paths_dict[pid]
-        if self.random_pick:
-            img_path1, img_path2 = np.random.choice(a=pid_all_paths, size=2, replace=False)
-        else:
-            img_path1, img_path2 = pid_all_paths[:2]
 
-        sample = self.get_data(img_path1, '')
-        sample2 = self.get_data(img_path2, '2')
-        
-        sample.update(sample2)
+        views = []
+        for img_path in pid_all_paths:
+          views.append(self.get_data(img_path))
 
+        sample = views[0]
+        sample['views'] = views[1:]
         return sample
+
 
